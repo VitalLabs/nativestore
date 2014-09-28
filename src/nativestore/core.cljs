@@ -360,7 +360,7 @@
   IScannable
   (-get-cursor [idx]
     (let [vals #js {:arry (goog.object.getValues (.-hashmap idx))}]
-      (Cursor. vals 0 (alength (.-arry vals)) true)))
+      (Cursor. vals 0 (dec (alength (.-arry vals))) true)))
   (-get-cursor [idx start]
     (assert false))
   (-get-cursor [idx start end]
@@ -420,14 +420,16 @@
           head (if (>= head 0) head (- (inc head)))
           tail (goog.array.binarySearch arry end #(compfn %1 (keyfn %2)))
           tail (if (>= tail 0) tail (- (inc tail)))
-          tail (loop [tail tail]
-                 (let [next (keyfn (aget arry tail))
-                       c (compfn end next)]
-                   (if (= c 0)
-                     (if (not= (inc tail) (alength (.-arry idx)))
-                       (recur (inc tail))
-                       tail)
-                     (dec tail))))]
+          tail (if (not (>= tail (alength (.-arry idx))))
+                 (loop [tail tail]
+                   (let [next (keyfn (aget arry tail))
+                         c (compfn end next)]
+                     (if (= c 0)
+                       (if (not= (inc tail) (alength (.-arry idx)))
+                         (recur (inc tail))
+                         tail)
+                       (dec tail))))
+                 tail)]
       (Cursor. idx head tail true))))
 
 (defn ordered-index [keyfn compfn]
@@ -464,7 +466,7 @@
 (defn compound-index [keyfns compfns]
   (BinaryIndex. (compound-key-fn keyfns) (compound-comparator compfns) (array)))
 
-(defn- as-store-native
+(defn as-native
   "Ensure submitted object is a native and set to read-only state"
   [obj]
   (if (= (type obj) Native)
@@ -511,7 +513,7 @@
     #_(println "Called insert!\n")
     ;; reuse this for writes instead of reads
     (with-tracked-dependencies [update-listeners]
-      (let [obj (as-store-native obj)]
+      (let [obj (as-native obj)]
         (let [key ((key-fn root) obj)
               _ (assert key "Must have an ID field")
               names (js-keys indices)

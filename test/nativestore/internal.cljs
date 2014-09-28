@@ -19,10 +19,13 @@
   (let [store (store/create)]
     (store/ensure-index store :name :name)
     (->> (store/compound-index [:income :name] [compare compare])
-         (store/add-index! store :income-alpha))
+         (store/ensure-index store :income-alpha))
     (insert-population store)
     (is (= (:name (get store 1)) "Fred"))
     (is (= (:name (store 1)) "Fred"))
+
+    ;; With a DB index
+    (is (= (set (mapv :id (store/cursor store))) #{1 2 3 4 5 6}))
 
     ;; With a simple index
     (is (= (set (mapv :id (store/cursor store :name "Flora" "Flora"))) #{4 5}))
@@ -42,9 +45,9 @@
     (store/ensure-index store :income :income)
     (insert-population store)
     (with-tracked-dependencies [identity]
-      (println (mapv :id (store/cursor store :income 20 20)))
       (is (= (count (income store 10)) 3))
-      (is (= (count (income store 20)) 2)))))
+      (is (= (count (income store 20)) 2))
+      (is (= (count (income store 0)) 0)))))
     
 
   
