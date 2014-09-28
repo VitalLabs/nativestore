@@ -1,12 +1,10 @@
 NativeStore
 ===========
 
-NativeStore is a simple, explicitly indexed in-memory datastore for
-managing native objects that supports the Derive library's dependency
-tracking protocol (http://github.com/vitalreactor/derive).  The store
-does not currently maintain historical versioning or a transaction
-log, although future versions are likely to support these features to
-enable efficient snapshotting and restoration of system state.
+NativeStore is an explicitly indexed in-memory datastore for managing
+native objects.  It supports the
+[Derive]((http://github.com/vitalreactor/derive) library's dependency
+tracking protocol.
 
 NativeStore is best thought of as an in-memory heap with database-like
 semantics on which one or more ordered indexes can be defined.
@@ -15,6 +13,12 @@ upsert-merge semantics, combining the key-value set of the new object
 with the existing state.  The transaction! function enables you to
 perform a set of updates and inform listeners of the aggregate updates
 rather than on each primitive insert! operation.
+
+The store does not currently maintain historical versioning or a
+transaction log, although future versions are likely to support these
+features to enable efficient snapshotting and restoration of system
+state.
+
 
 ## The Native Type
 
@@ -60,11 +64,11 @@ transducers.
 The immutable abstraction is not rigorously enforced.  Some critical
 things you should know:
 
-- transaction! is not ACID.  It is Consistent and Isolated (by virtue
-  of javascript's single-threadedness).  While side effects are
+- Transactions are not ACID.  They is Consistent and Isolated (by
+  virtue of javascript's single-threadedness).  While side effects are
   computed atomically, they are not strictly Atomic as errors will
-  leave the database in an inconsistent state.  There are no persistence
-  or Durability guarantees either.
+  leave the database in an inconsistent state.  There are no
+  persistence or Durability guarantees either.
 - It is currently an error to mutate a database object within a transaction
   function without calling insert! to update the indices.  In the future
   we will track reads and conservatively assume that the transaction
@@ -83,30 +87,31 @@ things you should know:
   read-only enforcemenet, etc.  However, if you kow what you are doing
   you can still access values using constructs like (aget native
   "field") and get near-optimal read performance on natives.
-- Use NativeStore responsibly.  We emphasized maximal performance,
-  reasonable flexiblity, with only a modicum of safety.  Safety
-  requires adherence to the conventions mentioned above.
 
-All these tradeoffs may be reconsidered in future revisions of the
-NativeStore.  NativeStore should be considered at an Alpha level of
-completeness.
+Use NativeStore responsibly.  We emphasized maximal performance,
+reasonable flexiblity, with only a modicum of safety.  Safety requires
+adherence to the conventions mentioned above.  All these tradeoffs may
+be reconsidered in future revisions of the NativeStore.  NativeStore
+should be considered at an Alpha level of completeness.
 
-# Using with Derive
+# Integrating with Derive
 
 Here is a native-store powered derive function with attention paid to copying.
 
 ```
-(define-derivation note [db note-id]
+(defnd note [db note-id]
   (let [note   (db note-id)
-        sender (:sender note)]                   ;; via native refs
+        sender (:sender note)]                       ;; via native refs
     (-> note 
-		(assoc      :note-class (f-of-note note) ;; ensure a copy
-		(update-in! :date       human-readable)  ;; mutation
+		(assoc      :note-class (f-of-note note)     ;; ensure a copy
+		(update-in! :date       human-readable)      ;; mutation
 		(assoc!     :content    escape-content)))))  ;; mutation
 ```
 
-Writing the original note pullutes the DB so is an error (via the
-read-only flag on natives) but the assoc copy is now mutable. 
+Overwriting the original note would pullute the DB in an untrackable
+way so is an error (via the read-only flag on natives) but the copy is
+mutable.  Attribute references that use the reference object also
+participate in the dependency tracking protocol.
 
 
 
