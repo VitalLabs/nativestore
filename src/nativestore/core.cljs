@@ -423,8 +423,10 @@
           tail (loop [tail tail]
                  (let [next (keyfn (aget arry tail))
                        c (compfn end next)]
-                   (if (and (= c 0) (not= (inc tail) (alength (.-arry idx))))
-                     (recur (inc tail))
+                   (if (= c 0)
+                     (if (not= (inc tail) (alength (.-arry idx)))
+                       (recur (inc tail))
+                       tail)
                      (dec tail))))]
       (Cursor. idx head tail true))))
 
