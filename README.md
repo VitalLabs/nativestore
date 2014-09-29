@@ -3,7 +3,7 @@ NativeStore
 
 NativeStore is an explicitly indexed in-memory datastore for managing
 native objects.  It supports the
-[Derive]((http://github.com/vitalreactor/derive) library's dependency
+[Derive](http://github.com/vitalreactor/derive) library's dependency
 tracking protocol.
 
 NativeStore is best thought of as an in-memory heap with database-like
@@ -114,7 +114,6 @@ Some examples of use:
 
 (->> (store/cursor :name)
      (td-avg-string-len :firstname))
-
 ```
 
 ### The Native Type
@@ -238,9 +237,34 @@ of those dependencies change. e.g.
 
 ```clj
 (render [_]
-  (derive/on-changes #(om/refresh! owner)
-    <render one or more stores to templates>))
+  (derive/on-changes [(derive/om-subscribe-handler owner) #(om/refresh! owner)]
+    (render-note (note-view (om/get-shared owner :store) note-id))))
 ```
+
+The Om subscription handler manages storing the handler and clearing
+it when a new callback is being subscribed.  You can also implement a
+will-unmount handler using `derive/om-unsubscribe-component` to
+unregister the callback when the component is re-rendered or unmounted
+to avoid memory leaks.  The refresh function is called when new
+dependencies are written.
+
+Here is a more complete derive function involving copying and mutation
+of the retrieved data.
+
+```
+(defnd note-view [store note-id]
+  (let [note   (db note-id)
+        sender (:sender note)]                       ;; via native refs
+    (-> note 
+		(assoc      :note-class (f-of-note note)     ;; ensure a copy
+		(update-in! :date       human-readable)      ;; mutation
+		(assoc!     :content    escape-content)))))  ;; mutation
+```
+
+Overwriting the original note would pullute the DB in an untrackable
+way so is an error (via the read-only flag on natives) but the copy is
+mutable.  Attribute references that use the reference object also
+participate in the dependency tracking protocol.
 
 
 # Caveat emptor
@@ -285,24 +309,7 @@ reasonable flexiblity and safety.  Adherence to the conventions
 mentioned above is crucial to avoid misusing the tool and creating
 difficult to track down bugs.
 
-# Integrating with Derive
 
-Here is a native-store powered derive function with attention paid to copying.
-
-```
-(defnd note [db note-id]
-  (let [note   (db note-id)
-        sender (:sender note)]                       ;; via native refs
-    (-> note 
-		(assoc      :note-class (f-of-note note)     ;; ensure a copy
-		(update-in! :date       human-readable)      ;; mutation
-		(assoc!     :content    escape-content)))))  ;; mutation
-```
-
-Overwriting the original note would pullute the DB in an untrackable
-way so is an error (via the read-only flag on natives) but the copy is
-mutable.  Attribute references that use the reference object also
-participate in the dependency tracking protocol.
 
 
 
