@@ -64,6 +64,3 @@
       (is (= (count (income store 10)) 3))
       (is (= (count (income store 20)) 2))
       (is (= (count (income store 0)) 0)))))
-    
-
-  
