@@ -179,6 +179,10 @@
         ((key-fn (.-root db)) obj)
         obj)))
 
+(defn identity? [n1 n2]
+  (= (:id n1) (:id n2)))
+
+          
 ;; Mutation can only be done on Natives in
 ;; a transaction or on copies of Natives generated
 ;; via assoc, etc. or store/clone
@@ -214,17 +218,20 @@
 
   ILookup
   (-lookup [native k]
-    (let [key (if (keyword? k) (name k) k)
-          res (aget native key)]
-      (if (satisfies? IReference res)
-        (resolve-ref res)
-        res)))
+    (-lookup native k nil))
   (-lookup [native k not-found]
     (let [key (if (keyword? k) (name k) k)
           res (aget native key)]
-      (cond (nil? res) not-found
-            (satisfies? IReference res) (resolve-ref res)
-            :default res)))
+      (cond (nil? res)
+            not-found
+            (array? res)
+            (if (satisfies? IReference (aget res 0))
+              (amap res ^int i ret (resolve-ref (aget res ^int i)))
+              res)
+            (satisfies? IReference res)
+            (resolve-ref res)
+            :default
+            res)))
 
   ITransientAssociative
   (-assoc! [native k v]
