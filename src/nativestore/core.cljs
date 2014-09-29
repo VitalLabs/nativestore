@@ -334,6 +334,17 @@
           (recur (inc i) (f ret (aget a i)))
           ret)))))
 
+(extend-type array
+  IReduce
+  (-reduce [this f]
+    (-reduce this f (f)))
+  (-reduce [this f init]
+    (let [end (.-length this)]
+      (loop [i 0 ret init]
+        (if (<= i end)
+          (recur (inc i) (f ret (aget this i)))
+          ret)))))
+
 ;; Hash KV Index, meant to be for a root store index (unique keys)
 ;; - Merging upsert against existing if keyfn output matches
 ;; - Nil values in provided object deletes keys
