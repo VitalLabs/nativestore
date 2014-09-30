@@ -300,10 +300,10 @@
 
 (defn- clone-native [native]
   {:pre [(native? native)]}
-  (let [new (goog.object.clone native)]
-    (aset new "constructor" (aget native "constructor"))
-    (aset new "__proto__" (aget native "__proto__"))
-    (writeable! new)))
+  (let [clone (new Native native)]
+    (goog.object.forEach native (fn [v k] (aset clone k v)))
+    (writeable! clone)))
+    
 
 
 ;;
