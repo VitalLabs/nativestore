@@ -108,6 +108,10 @@
     (overlap? (comparator-fn idx) this-range other-range)))
 
 (deftype NativeDependencySet [store deps]
+  IPrintWithWriter
+  (-pr-writer [native writer opts]
+    (-write writer (str "#ndep [" (pr-str deps) "]")))
+  
   d/IDependencySet
   (merge-deps [nset other]
     #_(println "NSet merge: " (type store) deps other "\n")
@@ -136,8 +140,9 @@
      (when (d/tracking?)
        (inform-tracker d/*tracker* store deps)))
   ([tracker store deps]
-     #_(println "Informing tracker: " deps " t? " d/*tracker* "\n")
-     (d/depends! tracker store deps)))
+     (let [dset (make-dependencies store deps)]
+       #_(.log js/console "Informing tracker: " dset " t? " d/*tracker* "\n")
+       (d/depends! tracker store dset))))
 
 ;;
 ;; Instance protocols
@@ -175,9 +180,9 @@
 
 (defn reference [db obj]
   (NativeReference.
-   db (if (native? obj)
-        ((key-fn (.-root db)) obj)
-        obj)))
+   db (if (or (string? obj) (number? obj) (not (native? obj)))
+        obj
+        ((key-fn (.-root db)) obj))))
 
 (defn identity? [n1 n2]
   (= (:id n1) (:id n2)))
@@ -226,7 +231,7 @@
             not-found
             (array? res)
             (if (satisfies? IReference (aget res 0))
-              (amap res ^int i ret (resolve-ref (aget res ^int i)))
+              (amap res i ret (resolve-ref (aget res i)))
               res)
             (satisfies? IReference res)
             (resolve-ref res)
@@ -279,31 +284,25 @@
     (goog.object.forEach jsobj (fn [v k] (aset native k v)))
     native))
 
-(comment
-  (defn fast-to-native
-    "Promotion version of to-native, doesn't work yet"
-    [jsobj]
-    (set! (.-constructor jsobj) Native)
-    ;; TODO: Copy impls?
-    ))
-
 (defn native? [native]
-  (= (.-constructor native) Native))
+  (when-let [proto (aget native "__proto__")]
+    (.hasOwnProperty proto "nativestore$core$IReadOnly$")))
 
 (defn read-only! [native]
   {:pre [(native? native)]}
-  (set! (.-__ro native) true)
+  (aset native "__ro" true)
   native)
 
 (defn writeable! [native]
   {:pre [(native? native)]}
-  (set! (.-__ro native) false)
+  (aset native "__ro" false)
   native)
 
 (defn- clone-native [native]
   {:pre [(native? native)]}
   (let [new (goog.object.clone native)]
-    (set! (.-constructor new) (.-constructor native))
+    (aset new "constructor" (aget native "constructor"))
+    (aset new "__proto__" (aget native "__proto__"))
     (writeable! new)))
 
 
@@ -487,7 +486,7 @@
 (defn as-native
   "Ensure submitted object is a native and set to read-only state"
   [obj]
-  (if (= (type obj) Native)
+  (if (native? obj)
     (do (set! (.-__ro obj) true) obj)
     (let [native (to-native obj)]
       (set! (.-__ro native) true)
@@ -504,6 +503,10 @@
 ;; - Always performs a merging upsert
 ;; - Secondary index doesn't index objects for key-fn -> nil
 (deftype NativeStore [root indices tx-listeners ^:mutable listeners]
+  IPrintWithWriter
+  (-pr-writer [native writer opts]
+    (-write writer (str "#NativeStore[]")))
+  
   ILookup
   (-lookup [store id]
     (-lookup store id nil))
