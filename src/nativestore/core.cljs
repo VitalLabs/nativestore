@@ -496,6 +496,7 @@
   "Use this to update store listeners when write dependencies
    have been accumulatd"
   [result dmap]
+  #_(.log js/console "Notifying listeners" dmap)
   (let [[store deps] (first dmap)]
     (d/notify-listeners store deps)))
 
@@ -531,7 +532,7 @@
     ;;
     ;; 2) Track side effects against indices, etc and forward to enclosing
     ;; transaction if present or notify active dependency listeners
-    #_(println "Called insert!\n")
+    #_(.log js/console "Called insert!\n")
     ;; reuse this for writes instead of reads
     (with-tracked-dependencies [update-listeners]
       (let [obj (as-native obj)]
