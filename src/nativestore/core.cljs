@@ -498,7 +498,8 @@
   [result dmap]
   #_(.log js/console "Notifying listeners" dmap)
   (let [[store deps] (first dmap)]
-    (d/notify-listeners store deps)))
+    (when store
+      (d/notify-listeners store deps))))
 
 ;; A native, indexed, mutable/transactional store
 ;; - Always performs a merging upsert
