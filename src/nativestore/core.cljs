@@ -79,8 +79,8 @@
   "Do two sorted sets of integers intersect?"
   [set1 set2]
   #_(println "Intersect? " set1 set2)
-  (let [len1 (if (nil? set1) 0 (.-length set1))
-        len2 (if (nil? set2) 0 (.-length set2))]
+  (let [len1 (if (nil? set1) 0 (alength set1))
+        len2 (if (nil? set2) 0 (alength set2))]
     (loop [i 0 j 0]
       (if (or (= i len1) (= j len2))
         false
@@ -417,7 +417,7 @@
         (goog.array.insertAt arry obj (- (inc loc)))))
     idx)
   (unindex! [idx obj]
-    (let [loc (goog.array.findIndex arry #(= obj %))]
+    (let [loc (goog.array.indexOf arry obj)]
       (when (>= loc 0)
         (goog.array.removeAt arry loc)))
     idx)
@@ -496,8 +496,9 @@
   "Use this to update store listeners when write dependencies
    have been accumulatd"
   [result dmap]
-  #_(.log js/console "Notifying listeners" dmap)
+;  (.log js/console "Notifying listeners" dmap)
   (let [[store deps] (first dmap)]
+;    (.log js/console "  Notifying store" store deps)
     (when store
       (d/notify-listeners store deps))))
 
