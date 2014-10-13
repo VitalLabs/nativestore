@@ -275,7 +275,20 @@
   (-conj [native [k v]]
     (let [new (clone-native native)]
       (aset new (if (keyword? k) (name k) k) v)
-      new)))
+      new))
+
+  ISeqable
+  (-seq [native]
+    (let [res (transient {})]
+      (goog.object.forEach
+       native
+       (fn [v k]
+         (let [k (keyword k)]
+           (when-not (or (fn? v)
+                         (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :derive$nativestore$IReadOnly$} k))
+             (assoc! res k v)))))
+      (seq (persistent! res)))))
+  
 
 (defn to-native
   "Copying version of to-native"
@@ -331,14 +344,29 @@
       (loop [i start ret init]
         (if (<= i end)
           (recur (inc i) (f ret (aget a i)))
-          ret)))))
+          ret))))
+
+  ISeqable
+  (-seq [this]
+    (into [] this)))
+
+;(deftype WrappedCursor [idx start end ^:mutable valid?]
+;  IReduce
+;  (-reduce [this f]
+;    (-reduce this f (f)))
+;  (-reduce [this f init]
+;    (let [a (.-arry idx)]
+;      (loop [i start ret init]
+;        (if (<= i end)
+;          (recur (inc i) (f ret (aget a i)))
+;          ret)))))
 
 (extend-type array
   IReduce
   (-reduce [this f]
     (-reduce this f (f)))
   (-reduce [this f init]
-    (let [end (.-length this)]
+    (let [end (alength this)]
       (loop [i 0 ret init]
         (if (<= i end)
           (recur (inc i) (f ret (aget this i)))
