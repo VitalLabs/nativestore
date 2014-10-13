@@ -272,7 +272,7 @@ participate in the dependency tracking protocol.
 The immutable abstraction of NativeStore is not rigorously enforced.
 Some critical things you should keep in mind:
 
-- Transactions are not ACID.  They is Consistent and Isolated (by
+- Transactions are not ACID.  They are Consistent and Isolated (by
   virtue of javascript's single-threadedness).  While side effects are
   computed atomically, they are not strictly Atomic as errors will
   leave the database in an inconsistent state.  There are no
