@@ -213,7 +213,7 @@
                   (let [v (aget native k)
                         k (keyword k)]
                     (when-not (or (fn? v)
-                                  (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :derive$nativestore$IReadOnly$} k))
+                                  (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :nativestore$core$IReadOnly$} k))
                       [k v])))))
      pr-writer writer opts))
 
@@ -285,7 +285,7 @@
        (fn [v k]
          (let [k (keyword k)]
            (when-not (or (fn? v)
-                         (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :derive$nativestore$IReadOnly$} k))
+                         (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :nativestore$core$IReadOnly$} k))
              (assoc! res k v)))))
       (seq (persistent! res)))))
   
