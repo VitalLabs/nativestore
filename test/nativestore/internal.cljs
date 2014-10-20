@@ -64,3 +64,11 @@
       (is (= (count (income store 10)) 3))
       (is (= (count (income store 20)) 2))
       (is (= (count (income store 0)) 0)))))
+
+;(deftest multi-index
+;  (let [idx (store/multi-index :a comparator)]
+;    (store/insert! idx (js-obj :a [1 2] :name "one-two"))
+;    (store/insert! idx (js-obj :a [3 4] :name "three-four"))
+;    (store/insert! idx (js-obj :a [2 4] :name "even"))
+;    (is (= (set (into [] (store/cursor idx 2 3)))
+;           #{"one-two" "three-four" "even"}))))

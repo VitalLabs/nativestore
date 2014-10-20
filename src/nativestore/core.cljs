@@ -480,6 +480,56 @@
 (defn ordered-index [keyfn compfn]
   (BinaryIndex. keyfn compfn (array)))
 
+;; (deftype MultiIndex [keyfn bidx]
+;;   IIndex
+;;   (key-fn [idx] keyfn)
+;;   (index! [idx obj]
+;;     (let [vals (keyfn obj)
+;;           len (alength vals)]
+;;       (loop [i (alength vals)]
+;;         (when (< i len)
+;;           (index! bidx (array (aget vals i) obj))
+;;           (recur (inc i))))))
+;;   (unindex! [idx obj]
+;;     (let [arry (aget bidx "arry")
+;;           find (fn [obj] (goog.array.findIndex arry #(= (aget % 1) obj)))]
+;;       (loop [loc (find obj)]
+;;         (when (>= loc 0)
+;;           (goog.array.removeAt arry loc)
+;;           (recur (find obj))))))
+    
+;;   ISortedIndex
+;;   (comparator-fn [idx]
+;;     (comparator-fn bidx))
+
+;;   IScannable
+;;   (-get-cursor [idx]
+;;     (let [cur (-get-cursor bidx)]
+;;       (WrappedCursor. (aget cur "idx")
+;;                       (aget cur "start")
+;;                     (aget cur "end")
+;;                     #(aget % 1)
+;;                     (aget cur "valid?"))))
+  
+;; (-get-cursor [idx start]
+;;   (let [cur (-get-cursor bidx start)]
+;;     (WrappedCursor. (aget cur "idx")
+;;                     (aget cur "start")
+;;                     (aget cur "end")
+;;                     #(aget % 1)
+;;                     (aget cur "valid?"))))
+  
+;; (-get-cursor [idx start end]
+;;   (let [cur (-get-cursor bidx start end)]
+;;     (WrappedCursor. (aget cur "idx")
+;;                     (aget cur "start")
+;;                     (aget cur "end")
+;;                     #(aget % 1)
+;;                     (aget cur "valid?")))))
+    
+;; (defn multi-index [keyfn compfn]
+;;   (MultiIndex. keyfn (ordered-index #(aget val 0) compfn)))
+
 (defn compound-key-fn
   "Return a js array key for compound ordering"
   [keyfns]
