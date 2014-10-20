@@ -404,7 +404,7 @@
 
   IScannable
   (-get-cursor [idx]
-    (let [vals #js {:arry (goog.object.getValues (.-hashmap idx))}]
+    (let [vals (js-obj :arry (goog.object.getValues (.-hashmap idx)))]
       (Cursor. vals 0 (dec (alength (.-arry vals))) true)))
   (-get-cursor [idx start]
     (assert false))
