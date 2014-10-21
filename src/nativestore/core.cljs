@@ -279,15 +279,15 @@
 
   ISeqable
   (-seq [native]
-    (let [res (transient {})]
+    (let [res (array)]
       (goog.object.forEach
        native
        (fn [v k]
          (let [k (keyword k)]
            (when-not (or (fn? v)
                          (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :nativestore$core$IReadOnly$} k))
-             (assoc! res k v)))))
-      (seq (persistent! res)))))
+             (.push res [k v])))))
+      (seq res))))
   
 
 (defn to-native
@@ -404,7 +404,7 @@
 
   IScannable
   (-get-cursor [idx]
-    (let [vals (js-obj :arry (goog.object.getValues (.-hashmap idx)))]
+    (let [vals (js-obj "arry" (goog.object.getValues (.-hashmap idx)))]
       (Cursor. vals 0 (dec (alength (.-arry vals))) true)))
   (-get-cursor [idx start]
     (assert false))
