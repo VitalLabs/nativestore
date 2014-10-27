@@ -122,6 +122,7 @@
                  (merge-index! nset (get-index store k) mine v)
                  (aset deps k (js-copy v)))))
       nset))
+  
   (match-deps [nset other]
     (let [fdeps (if (nil? (.-deps other)) other (.-deps other))]
       #_(println "Matching: " deps fdeps "\n")
@@ -626,7 +627,7 @@
             (doseq [iname names]
               (let [idx (aget indices iname)
                     ikey ((key-fn idx) old)]
-                (when-not (nil? ikey)
+                (when-not ikey
                   (inform-tracker store (js-obj (name iname) (array ikey ikey)))
                   (unindex! idx old)))))
           ;; Merge-update the root
@@ -638,7 +639,7 @@
             (doseq [iname names]
               (let [idx (aget indices iname)
                     ikey ((key-fn idx) new)]
-                (when-not (nil? ikey)
+                (when-not ikey
                   (inform-tracker store (js-obj (name iname) (array ikey ikey)))
                   (index! idx new))))
             ;; Update listeners
@@ -654,7 +655,7 @@
         (doseq [iname (js-keys indices)]
           (let [idx (aget indices iname)
                 ikey ((key-fn idx) old)]
-            (when-not (nil? ikey)
+            (when-not ikey
               (inform-tracker store (js-obj (name iname) (array ikey ikey)))
               (unindex! idx old))))
         (inform-tracker store (js-obj "_root" (array id)))
