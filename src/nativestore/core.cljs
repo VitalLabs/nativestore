@@ -465,12 +465,12 @@
           head (if (>= head 0) head (- (inc head)))
           tail (goog.array.binarySearch arry end #(compfn %1 (keyfn %2)))
           tail (if (>= tail 0) tail (- (inc tail)))
-          tail (if (not (>= tail (alength (.-arry idx))))
+          tail (if (not (>= tail (dec (alength (.-arry idx)))))
                  (loop [tail tail]
                    (let [next (keyfn (aget arry tail))
                          c (compfn end next)]
                      (if (= c 0)
-                       (if (not= (inc tail) (alength (.-arry idx)))
+                       (if (not= (inc tail) (dec (alength (.-arry idx))))
                          (recur (inc tail))
                          tail)
                        (dec tail))))
