@@ -460,7 +460,7 @@
   (-get-cursor [idx start]
     (let [head (goog.array.binarySearch arry start #(compfn %1 (keyfn %2)))
           head (if (>= head 0) head (- (inc head)))]
-      (Cursor. idx start (dec (alength (.-arry idx))) true)))
+      (Cursor. idx head (dec (alength (.-arry idx))) true)))
   (-get-cursor [idx start end]
     (let [head (goog.array.binarySearch arry start #(compfn %1 (keyfn %2)))
           head (if (>= head 0) head (- (inc head)))
