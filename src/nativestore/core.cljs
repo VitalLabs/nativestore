@@ -771,7 +771,7 @@
 (defn ensure-index
   ([store iname key comp]
      (when-not (get-index store iname)
-       (add-index! store iname (ordered-index (field-key key) comp))))
+       (add-index! store iname (ordered-index (if (fn? key) key (field-key key)) comp))))
   ([store iname key-or-idx]
      (if (or (keyword? key-or-idx) (symbol? key-or-idx))
        (ensure-index store iname key-or-idx compare)
