@@ -626,7 +626,7 @@
             (doseq [iname names]
               (let [idx (aget indices iname)
                     ikey ((key-fn idx) old)]
-                (when-not ikey
+                (when-not (or (nil? ikey) (= ikey false))
                   (inform-tracker store (js-obj (name iname) (array ikey ikey)))
                   (unindex! idx old)))))
           ;; Merge-update the root
@@ -638,7 +638,7 @@
             (doseq [iname names]
               (let [idx (aget indices iname)
                     ikey ((key-fn idx) new)]
-                (when-not ikey
+                (when-not (or (nil? ikey) (= ikey false))
                   (inform-tracker store (js-obj (name iname) (array ikey ikey)))
                   (index! idx new))))
             ;; Update listeners
@@ -654,7 +654,7 @@
         (doseq [iname (js-keys indices)]
           (let [idx (aget indices iname)
                 ikey ((key-fn idx) old)]
-            (when-not ikey
+            (when-not (or (nil? ikey) (= ikey false))
               (inform-tracker store (js-obj (name iname) (array ikey ikey)))
               (unindex! idx old))))
         (inform-tracker store (js-obj "_root" (array id)))
