@@ -348,7 +348,8 @@
 
   ISeqable
   (-seq [this]
-    (into [] this)))
+    (seq (into [] this))))
+
 
 ;(deftype WrappedCursor [idx start end ^:mutable valid?]
 ;  IReduce
