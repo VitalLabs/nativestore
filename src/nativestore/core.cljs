@@ -299,8 +299,7 @@
     native))
 
 (defn native? [native]
-  (when-let [proto (aget native "__proto__")]
-    (.hasOwnProperty proto "nativestore$core$IReadOnly$")))
+  (instance? Native native))
 
 (defn read-only! [native]
   {:pre [(native? native)]}
