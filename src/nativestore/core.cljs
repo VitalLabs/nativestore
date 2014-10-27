@@ -303,12 +303,12 @@
 
 (defn read-only! [native]
   {:pre [(native? native)]}
-  (aset native "__ro" true)
+  (set! (.-__ro native) true)
   native)
 
 (defn writeable! [native]
   {:pre [(native? native)]}
-  (aset native "__ro" false)
+  (set! (.-__ro native) false)
   native)
 
 (defn- clone-native [native]
