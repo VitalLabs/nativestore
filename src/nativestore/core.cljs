@@ -743,17 +743,20 @@
   ([store index]
      (let [iname (name index)
            index (get-index store iname)]
+       (assert index (str "Index " iname " is not defined."))
        (inform-tracker store (js-obj iname nil))
        (-get-cursor index)))
   ([store index start]
      (let [iname (name index)
            index (get-index store index)]
-       (inform-tracker store (js-obj iname (array start (last-val index)))) ;; shorthand
+       (assert index (str "Index " iname " is not defined."))
+       (inform-tracker store (js-obj iname (array start))) ;; shorthand
        (-get-cursor index start)))
   ([store index start end]
      (let [iname (name index)
            index (get-index store index)]
-       (inform-tracker store (js-obj iname (array [start end])))
+       (assert index (str "Index " iname " is not defined."))
+       (inform-tracker store (js-obj iname (array start end)))
        (-get-cursor index start end))))
 
 (defn field-key [field]
