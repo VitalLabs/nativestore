@@ -220,7 +220,7 @@
 
   ICounted
   (-count [native]
-    (.length (js-keys native)))
+    (alength (js-keys native)))
 
   ILookup
   (-lookup [native k]
@@ -340,7 +340,7 @@
   (-reduce [this f]
     (-reduce this f (f)))
   (-reduce [this f init]
-    (let [a (.-arry idx)]
+    (let [a (or (.-arry idx) (aget idx "arry"))]
       (loop [i start ret init]
         (if (<= i end)
           (recur (inc i) (f ret (aget a i)))
@@ -405,11 +405,11 @@
   IScannable
   (-get-cursor [idx]
     (let [vals (js-obj "arry" (goog.object.getValues (.-hashmap idx)))]
-      (Cursor. vals 0 (dec (alength (.-arry vals))) true)))
+      (Cursor. vals 0 (dec (alength (aget vals "arry"))) true)))
   (-get-cursor [idx start]
-    (assert false))
+    (assert false "Hash index does not support range queries"))
   (-get-cursor [idx start end]
-    (assert false)))
+    (assert false "Hash index does not support range queries")))
 
 (defn root-index []
   (HashIndex. #(aget % "id") #js {}))
