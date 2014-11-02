@@ -335,16 +335,18 @@
      (apply upsert-merge (upsert-merge o1 o2) more)))
 
 ;; Return a cursor for walking a range of the index
-(deftype Cursor [idx start end ^:mutable valid?]
+(deftype Cursor [idx start end ^:mutable valid? empty?]
   IReduce
   (-reduce [this f]
     (-reduce this f (f)))
   (-reduce [this f init]
-    (let [a (or (.-arry idx) (aget idx "arry"))]
-      (loop [i start ret init]
-        (if (<= i end)
-          (recur (inc i) (f ret (aget a i)))
-          ret))))
+    (if empty?
+      init
+      (let [a (or (.-arry idx) (aget idx "arry"))]
+        (loop [i start ret init]
+          (if (<= i end)
+            (recur (inc i) (f ret (aget a i)))
+            ret)))))
 
   ISeqable
   (-seq [this]
@@ -406,7 +408,7 @@
   IScannable
   (-get-cursor [idx]
     (let [vals (js-obj "arry" (goog.object.getValues (.-hashmap idx)))]
-      (Cursor. vals 0 (dec (alength (aget vals "arry"))) true)))
+      (Cursor. vals 0 (dec (alength (aget vals "arry"))) true false)))
   (-get-cursor [idx start]
     (assert false "Hash index does not support range queries"))
   (-get-cursor [idx start end]
@@ -456,16 +458,16 @@
 
   IScannable
   (-get-cursor [idx]
-    (Cursor. idx 0 (dec (alength (.-arry idx))) true))
+    (Cursor. idx 0 (dec (alength (.-arry idx))) true false))
   (-get-cursor [idx start]
     (let [head (goog.array.binarySearch arry start #(compfn %1 (keyfn %2)))
           head (if (>= head 0) head (- (inc head)))]
-      (Cursor. idx head (dec (alength (.-arry idx))) true)))
+      (Cursor. idx head (dec (alength (.-arry idx))) true false)))
   (-get-cursor [idx start end]
-    (let [head (goog.array.binarySearch arry start #(compfn %1 (keyfn %2)))
-          head (if (>= head 0) head (- (inc head)))
-          tail (goog.array.binarySearch arry end #(compfn %1 (keyfn %2)))
-          tail (if (>= tail 0) tail (- (inc tail)))
+    (let [headidx (goog.array.binarySearch arry start #(compfn %1 (keyfn %2)))
+          head (if (>= headidx 0) headidx (- (inc headidx)))
+          tailidx (goog.array.binarySearch arry end #(compfn %1 (keyfn %2)))
+          tail (if (>= tailidx 0) tailidx (- (inc tailidx)))
           tail (if (not (>= tail (dec (alength (.-arry idx)))))
                  (loop [tail tail]
                    (let [next (keyfn (aget arry tail))
@@ -476,7 +478,8 @@
                          tail)
                        (dec tail))))
                  tail)]
-      (Cursor. idx head tail true))))
+      (let [empty? (and (= head tail) (and (< tailidx 0) (< headidx 0)))]
+        (Cursor. idx head tail true empty?)))))
 
 (defn ordered-index [keyfn compfn]
   (BinaryIndex. keyfn compfn (array)))
