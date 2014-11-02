@@ -82,7 +82,7 @@
   (let [len1 (if (nil? set1) 0 (alength set1))
         len2 (if (nil? set2) 0 (alength set2))]
     (loop [i 0 j 0]
-      (if (or (= i len1) (= j len2))
+      (if (or (== i len1) (== j len2))
         false
         (let [v1 (aget set1 i)
               v2 (aget set2 j)]
@@ -90,6 +90,11 @@
                 (> (compare v1 v2) 0) (recur i (inc j))
                 :default (recur (inc i) j)))))))
 
+;; (0 10) (2 2) => true
+;; (10 20) (5 5) => false
+;; (10 20) (0 10) => true
+;; (10 20) (0 nil) => true
+;; (10 nil) (20 20) => true
 (defn- overlap?
   "Does the interval of other overlap this?"
   [compfn range1 range2]
@@ -97,9 +102,9 @@
         r1e (aget range1 1)
         r2s (aget range2 0)
         r2e (aget range2 1)]
-    (not (or (> (compfn r2s r1e) 0)
-             (< (compfn r2e r1s) 0)))))
-  
+    (not (or (if (nil? r1e) (< (compfn r2e r1s) 0) (> (compfn r2s r1e) 0))
+             (if (nil? r2e) (< (compfn r1e r2s) 0) (< (compfn r2e r1s) 0))))))
+             
 (defn- match-index?
   [nset idx this-range other-range]
   #_(println "Matching index: " this-range " " other-range "\n")
@@ -741,13 +746,13 @@
 (defn cursor
   "Walk the entire store, or an index"
   ([store]
-     ;; TODO - this is broken, add inform tracker, etc.
+     ;; NOTE: No dependencies on whole DB
      (-get-cursor (.-root store)))
   ([store index]
      (let [iname (name index)
            index (get-index store iname)]
        (assert index (str "Index " iname " is not defined."))
-       (inform-tracker store (js-obj iname nil))
+       (inform-tracker store (js-obj iname (array)))
        (-get-cursor index)))
   ([store index start]
      (let [iname (name index)
