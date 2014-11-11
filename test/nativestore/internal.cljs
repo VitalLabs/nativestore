@@ -55,14 +55,20 @@
 (defnd income [store value]
   (mapv :id (store/cursor store :income value value)))
 
+(defnd by-name [store nam]
+  (mapv :id (store/cursor store :name nam nam)))
+
 (deftest derive-integration
   (let [store (store/create)]
     (store/ensure-index store :name :name)
     (store/ensure-index store :income :income)
     (insert-population store)
-    (with-tracked-dependencies [identity]
+    (with-tracked-dependencies [(fn [a b] nil)]
+      (is (= (count (by-name store "Flora")) 2))
+      (is (= (count (by-name store "Apple")) 1))
       (is (= (count (income store 10)) 3))
       (is (= (count (income store 20)) 2))
+      (is (= (count (income store 5)) 1))
       (is (= (count (income store 0)) 0)))))
 
 ;(deftest multi-index

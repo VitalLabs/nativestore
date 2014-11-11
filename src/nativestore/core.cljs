@@ -39,7 +39,7 @@
 
 ;; A dependency representation is:
 ;;
-;; #js { _root: #js [<id_i> ...] 
+;; #js { root: #js [<id_i> ...] 
 ;;       <idx_name>: #js [start end] }
 ;;
 ;; The root is a sorted list of object IDs (reference traversal or direct lookups)
@@ -101,9 +101,12 @@
   (let [r1s (aget range1 0)
         r1e (aget range1 1)
         r2s (aget range2 0)
-        r2e (aget range2 1)]
-    (not (or (if (nil? r1e) (< (compfn r2e r1s) 0) (> (compfn r2s r1e) 0))
-             (if (nil? r2e) (< (compfn r1e r2s) 0) (< (compfn r2e r1s) 0))))))
+        r2e (aget range2 1)
+        res (not (or (if (nil? r1e) (< (compfn r2e r1s) 0) (> (compfn r2s r1e) 0))
+                     (if (nil? r2e) (< (compfn r1e r2s) 0) (< (compfn r2e r1s) 0))))]
+    #_(println "Overlap? " range1 range2 res)
+    res))
+    
              
 (defn- match-index?
   [nset idx this-range other-range]
@@ -201,9 +204,13 @@
 (defprotocol IReadOnly
   (-read-only? [_]))
 
+(defprotocol INative)
+  
 (declare clone-native)
 
 (deftype Native [^:mutable __ro]
+  INative
+
   IEmptyableCollection
   (-empty [_] (Native. false))
 
@@ -304,7 +311,7 @@
     native))
 
 (defn native? [native]
-  (instance? Native native))
+  (satisfies? INative native))
 
 (defn read-only! [native]
   {:pre [(native? native)]}
@@ -473,12 +480,12 @@
           head (if (>= headidx 0) headidx (- (inc headidx)))
           tailidx (goog.array.binarySearch arry end #(compfn %1 (keyfn %2)))
           tail (if (>= tailidx 0) tailidx (- (inc tailidx)))
-          tail (if (not (>= tail (dec (alength (.-arry idx)))))
+          tail (if (not (>= tail (alength (.-arry idx))))
                  (loop [tail tail]
                    (let [next (keyfn (aget arry tail))
                          c (compfn end next)]
                      (if (= c 0)
-                       (if (not= (inc tail) (dec (alength (.-arry idx))))
+                       (if (not= (inc tail) (alength (.-arry idx)))
                          (recur (inc tail))
                          tail)
                        (dec tail))))
@@ -583,9 +590,9 @@
   "Use this to update store listeners when write dependencies
    have been accumulatd"
   [result dmap]
-;  (.log js/console "Notifying listeners" dmap)
+  #_(.log js/console "Notifying listeners" dmap)
   (let [[store deps] (first dmap)]
-;    (.log js/console "  Notifying store" store deps)
+    #_(.log js/console "  Notifying store" store deps)
     (when store
       (d/notify-listeners store deps))))
 
@@ -602,7 +609,7 @@
     (-lookup store id nil))
   (-lookup [store id not-found]
     (when-let [val (-lookup root id not-found)]
-      (inform-tracker store (js-obj "_root" (array id)))
+      (inform-tracker store (js-obj "root" (array id)))
       val))
 
   ICounted
@@ -639,8 +646,8 @@
                   (inform-tracker store (js-obj (name iname) (array ikey ikey)))
                   (unindex! idx old)))))
           ;; Merge-update the root
-          #_(println "Informing tracker of root: " (js-obj "_root" (array key)) "\n")
-          (inform-tracker store (js-obj "_root" (array key)))
+          #_(println "Informing tracker of root: " (js-obj "root" (array key)) "\n")
+          (inform-tracker store (js-obj "root" (array key)))
           (index! root obj) ;; merging upsert
           (let [new (get root key)]
             ;; Re-insert
@@ -666,7 +673,7 @@
             (when-not (or (nil? ikey) (= ikey false))
               (inform-tracker store (js-obj (name iname) (array ikey ikey)))
               (unindex! idx old))))
-        (inform-tracker store (js-obj "_root" (array id)))
+        (inform-tracker store (js-obj "root" (array id)))
         (unindex! root old)
         (if *transaction*
           (.push *transaction* #js [:delete old])
