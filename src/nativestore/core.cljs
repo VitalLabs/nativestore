@@ -204,7 +204,7 @@
         ((key-fn (.-root db)) obj))))
 
 (defn identity? [n1 n2]
-  (= (:id n1) (:id n2)))
+  (= (aget n1 "id") (aget n2 "id")))
 
           
 ;; Mutation can only be done on Natives in
