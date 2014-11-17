@@ -119,6 +119,16 @@
   IPrintWithWriter
   (-pr-writer [native writer opts]
     (-write writer (str "#ndep [" (pr-str deps) "]")))
+
+  IHash
+  (-hash [o]
+    (goog/getUid o))
+
+  IEquiv
+  (-equiv [o other]
+    (if (instance? NativeDependencySet other)
+      (== (-hash o) (-hash other))
+      false))
   
   d/IDependencySet
   (merge-deps [nset other]
