@@ -731,9 +731,17 @@
   (subscribe! [this listener deps]
     (set! listeners (update-in listeners [deps] (fnil conj #{}) listener)))
   (unsubscribe! [this listener]
-    (set! listeners (update-in listeners [nil] disj listener)))
+    (let [old-set (get listeners nil)
+          new-set (disj listeners listener)]
+      (if (empty? new-set)
+        (set! listeners (dissoc listeners nil))
+        (set! listeners (assoc listeners nil new-set)))))
   (unsubscribe! [this listener deps]
-    (set! listeners (update-in listeners [deps] disj listener)))
+    (let [old-set (get listeners deps)
+          new-set (when (set? old-set) (disj old-set listener))]
+      (if (empty? new-set)
+        (set! listeners (dissoc listeners deps))
+        (set! listeners (assoc listeners deps new-set)))))
   (empty-deps [this] (make-dependencies this)))
 
 
