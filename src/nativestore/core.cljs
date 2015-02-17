@@ -618,9 +618,8 @@
   (-lookup [store id]
     (-lookup store id nil))
   (-lookup [store id not-found]
-    (when-let [val (-lookup root id not-found)]
-      (inform-tracker store (js-obj "root" (array id)))
-      val))
+    (inform-tracker store (js-obj "root" (array id)))
+    (-lookup root id not-found))
 
   ICounted
   (-count [store] (-count root))
