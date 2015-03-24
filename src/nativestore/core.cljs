@@ -308,7 +308,7 @@
        (fn [v k]
          (let [k (keyword k)]
            (when-not (or (fn? v)
-                         (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :nativestore$core$IReadOnly$} k))
+                         (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :nativestore$core$IReadOnly$ :nativestore$core$INative$} k))
              (.push res [k v])))))
       (seq res))))
   
