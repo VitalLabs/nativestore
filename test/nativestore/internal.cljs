@@ -84,3 +84,16 @@
 ;    (store/insert! idx (js-obj :a [2 4] :name "even"))
 ;    (is (= (set (into [] (store/cursor idx 2 3)))
 ;           #{"one-two" "three-four" "even"}))))
+
+
+(deftest clear-db
+  (let [store (store/create)]
+    (store/ensure-index store :name :name)
+    (insert-population store)
+    (is (= (:id (store 2)) 2)
+    (is (= (count (by-name store "Flora")) 2)))
+    (store/clear! store)
+    (is (nil? (:id (store 2))))
+    (is (= (count (by-name store "Flora")) 0))))
+    
+      

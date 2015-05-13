@@ -19,6 +19,9 @@
   (index! [idx obj])
   (unindex! [idx obj]))
 
+(defprotocol IClearable
+  (clear! [idx]))
+
 (defprotocol ISortedIndex
   (comparator-fn [idx]))
 
@@ -416,6 +419,10 @@
     (let [key (keyfn obj)]
       (js-dissoc hashmap key obj)))
 
+  IClearable
+  (clear! [idx]
+    (goog.array.clear hashmap))
+
   IScannable
   (-get-cursor [idx]
     (let [vals (js-obj "arry" (goog.object.getValues (.-hashmap idx)))]
@@ -463,6 +470,10 @@
       (when (>= loc 0)
         (goog.array.removeAt arry loc)))
     idx)
+
+  IClearable
+  (clear! [idx]
+    (goog.array.clear arry))
 
   ISortedIndex
   (comparator-fn [idx] compfn)
@@ -664,7 +675,7 @@
   (delete! [store id]
     (assert (contains? root id) "Exists")
     (with-tracked-dependencies [update-listeners]
-      (let [old (get root id)]
+      (when-let [old (get root id)]
         (doseq [iname (js-keys indices)]
           (let [idx (aget indices iname)
                 ikey ((key-fn idx) old)]
@@ -675,8 +686,20 @@
         (unindex! root old)
         (if *transaction*
           (.push *transaction* #js [:delete old])
-          (-notify-watches store nil #js [:delete old]))
-        store)))
+          (-notify-watches store nil #js [:delete old])))
+      store))
+
+  IClearable
+  (clear! [store]
+    ;; Invalidate all listeners
+    (d/force-invalidation store)
+    ;; Cleanly remove data by reverse-walking the root
+    (doseq [obj (seq (-get-cursor root))]
+      (delete! store ((key-fn root) obj)))
+    ;; Ensure we've cleared everything (e.g. dependency ordering problems)
+    (doseq [iname (js-keys indices)]
+      (clear! (aget indices iname)))
+    (clear! root))
 
   IIndexedStore
   (add-index! [store iname index]
