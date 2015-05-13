@@ -35,7 +35,12 @@
     ;; With a compound index
     (is (= (mapv :id (store/cursor store :income-alpha)) [6 5 1 2 3 4]))
     (is (= (mapv :id (store/cursor store :income-alpha #js [10 "Fred"] #js [20 "Apple"]))
-           [1 2 3]))))
+           [1 2 3]))
+
+    ;; Test deletion
+    (store/delete! store 2)
+    (is (nil? (store 2)))
+    (is (= (mapv :id (store/cursor store :income-alpha)) [6 5 1 3 4]))))
 
 (deftest references
   (let [store (store/create)]
@@ -70,6 +75,7 @@
       (is (= (count (income store 20)) 2))
       (is (= (count (income store 5)) 1))
       (is (= (count (income store 0)) 0)))))
+    
 
 ;(deftest multi-index
 ;  (let [idx (store/multi-index :a comparator)]
