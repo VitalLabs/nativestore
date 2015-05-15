@@ -673,7 +673,6 @@
         store)))
 
   (delete! [store id]
-    (assert (contains? root id) "Exists")
     (with-tracked-dependencies [update-listeners]
       (when-let [old (get root id)]
         (doseq [iname (js-keys indices)]
@@ -699,7 +698,8 @@
     ;; Ensure we've cleared everything (e.g. dependency ordering problems)
     (doseq [iname (js-keys indices)]
       (clear! (aget indices iname)))
-    (clear! root))
+    (clear! root)
+    store)
 
   IIndexedStore
   (add-index! [store iname index]
