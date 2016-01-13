@@ -282,7 +282,7 @@
   (-assoc [native k v]
     (let [new (clone native)]
       (vswap! keyset conj k)
-      (aset new (name k))
+      (aset new (name k) v)
       new))
   
   IMap
