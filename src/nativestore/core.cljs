@@ -219,13 +219,18 @@
 
 (defprotocol INative)
   
-(declare clone-native)
-
-(deftype Native [^:mutable __ro]
+(deftype Native [keyset ^:mutable __ro]
   INative
 
+  ICloneable
+  (-clone [this]
+    (let [clone (Native. (volatile! #{}) false)]
+      (doseq [[k v] (seq this)]
+        (aset clone k v))
+      clone))
+
   IEmptyableCollection
-  (-empty [_] (Native. false))
+  (-empty [_] (Native. (volatile! #{}) false))
 
   IReadOnly
   (-read-only? [_] __ro)
@@ -233,93 +238,73 @@
   IPrintWithWriter
   (-pr-writer [native writer opts]
     (-write writer "#native ")
-    (print-map
-     (->> (js-keys native)
-          (keep (fn [k]
-                  (let [v (aget native k)
-                        k (keyword k)]
-                    (when-not (or (fn? v)
-                                  (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :nativestore$core$IReadOnly$} k))
-                      [k v])))))
-     pr-writer writer opts))
+    (print-map (map (fn [k] [k (aget native (name k))]) @keyset)
+               pr-writer writer opts))
 
   ICounted
   (-count [native]
-    (alength (js-keys native)))
+    (count @keyset))
 
   ILookup
   (-lookup [native k]
     (-lookup native k nil))
   (-lookup [native k not-found]
-    (let [key (if (keyword? k) (name k) k)
-          res (aget native key)]
-      (cond (nil? res)
-            not-found
-            (array? res)
-            (if (satisfies? IReference (aget res 0))
-              (amap res i ret (resolve-ref (aget res i)))
-              res)
-            (satisfies? IReference res)
-            (resolve-ref res)
-            :default
-            res)))
+    (let [v (aget native (name k))]
+      (cond
+        (nil? v) not-found
+        (array? v) (if (satisfies? IReference (aget v 0))
+                     (amap v i ret (resolve-ref (aget v i)))
+                     v)
+        (satisfies? IReference v) (resolve-ref v)
+        :default v)))
 
   ITransientAssociative
   (-assoc! [native k v]
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (aset native (if (keyword? k) (name k) k) v)
+    (vswap! keyset conj k)
+    (aset native (name k) v)
     native)
 
   ITransientCollection
   (-conj! [native [k v]]
-    (when (and (-read-only? native) (not *transaction*))
-      (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (aset native (if (keyword? k) (name k) k) v)
-    native)
+    (-assoc! native k v))
   
   ITransientMap
   (-dissoc! [native k]
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (cljs.core/js-delete native (if (keyword? k) (name k) k))
+    (vswap! keyset disj k)
+    (cljs.core/js-delete native (name k))
     native)
 
   IAssociative
   (-assoc [native k v]
-    (let [new (clone-native native)]
-      (aset new (if (keyword? k) (name k) k) v)
+    (let [new (clone native)]
+      (vswap! keyset conj k)
+      (aset new (name k))
       new))
   
   IMap
   (-dissoc [native k]
-    (let [new (clone-native native)]
-      (cljs.core/js-delete new (if (keyword? k) (name k) k))
+    (let [new (clone native)]
+      (vswap! keyset disj k)
+      (cljs.core/js-delete new (name k))
       new))
     
   ICollection
   (-conj [native [k v]]
-    (let [new (clone-native native)]
-      (aset new (if (keyword? k) (name k) k) v)
-      new))
+    (-assoc native k v))
 
   ISeqable
   (-seq [native]
-    (let [res (array)]
-      (goog.object.forEach
-       native
-       (fn [v k]
-         (let [k (keyword k)]
-           (when-not (or (fn? v)
-                         (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :nativestore$core$IReadOnly$ :nativestore$core$INative$} k))
-             (.push res [k v])))))
-      (seq res))))
+    (map (fn [k] [k (aget native (name k))]) @keyset)))
   
 
 (defn to-native
   "Copying version of to-native"
   [jsobj]
-  (let [native (Native. false)]
+  (let [native (Native. (volatile! #{}) false)]
     (goog.object.forEach jsobj (fn [v k] (aset native k v)))
     native))
 
@@ -335,12 +320,6 @@
   {:pre [(native? native)]}
   (set! (.-__ro native) false)
   native)
-
-(defn- clone-native [native]
-  {:pre [(native? native)]}
-  (let [clone (new Native native)]
-    (goog.object.forEach native (fn [v k] (aset clone k v)))
-    (writeable! clone)))
     
 
 
