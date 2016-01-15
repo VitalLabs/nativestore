@@ -224,7 +224,7 @@
 
   ICloneable
   (-clone [this]
-    (let [clone (Native. (volatile! #{}) false)]
+    (let [clone (Native. (volatile! keyset) false)]
       (doseq [[k v] (seq this)]
         (aset clone k v))
       clone))
