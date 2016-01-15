@@ -235,20 +235,16 @@
   IReadOnly
   (-read-only? [_] __ro)
 
-  IPrintWithWriter
-  (-pr-writer [native writer opts]
-    (-write writer "#native ")
-    (print-map (map (fn [k] [k (aget native (name k))]) @keyset)
-               pr-writer writer opts))
-
   ICounted
   (-count [native]
     (count @keyset))
 
   ILookup
   (-lookup [native k]
+    {:pre [(keyword? k)]}
     (-lookup native k nil))
   (-lookup [native k not-found]
+    {:pre [(keyword? k)]}
     (let [v (aget native (name k))]
       (cond
         (nil? v) not-found
@@ -260,6 +256,7 @@
 
   ITransientAssociative
   (-assoc! [native k v]
+    {:pre [(keyword? k)]}
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
     (vswap! keyset conj k)
@@ -268,10 +265,12 @@
 
   ITransientCollection
   (-conj! [native [k v]]
+    {:pre [(keyword? k)]}
     (-assoc! native k v))
   
   ITransientMap
   (-dissoc! [native k]
+    {:pre [(keyword? k)]}
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
     (vswap! keyset disj k)
@@ -280,6 +279,7 @@
 
   IAssociative
   (-assoc [native k v]
+    {:pre [(keyword? k)]}
     (let [new (clone native)]
       (vswap! keyset conj k)
       (aset new (name k) v)
@@ -287,6 +287,7 @@
   
   IMap
   (-dissoc [native k]
+    {:pre [(keyword? k)]}
     (let [new (clone native)]
       (vswap! keyset disj k)
       (cljs.core/js-delete new (name k))
@@ -294,29 +295,46 @@
     
   ICollection
   (-conj [native [k v]]
+    {:pre [(keyword? k)]}
     (-assoc native k v))
 
   ISeqable
   (-seq [native]
-    (map (fn [k] [k (aget native (name k))]) @keyset)))
+    (map (fn [k] [(keyword k) (aget native (name k))]) @keyset))
+
+  IEncodeClojure
+  (-js->clj [native opts]
+    native)
+
+  IPrintWithWriter
+  (-pr-writer [native writer opts]
+    (-write writer "#native ")
+    (print-map (-seq native)
+               pr-writer writer opts)))
   
+(defn native
+  ([] (native false))
+  ([ro?] (Native. (volatile! #{}) ro?)))
 
 (defn to-native
   "Copying version of to-native"
   [jsobj]
-  (let [native (Native. (volatile! #{}) false)]
+  (let [native (native false)]
     (goog.object.forEach jsobj (fn [v k] (aset native k v)))
     native))
 
-(defn native? [native]
+(defn native?
+  [native]
   (satisfies? INative native))
 
-(defn read-only! [native]
+(defn read-only!
+  [native]
   {:pre [(native? native)]}
   (set! (.-__ro native) true)
   native)
 
-(defn writeable! [native]
+(defn writeable!
+  [native]
   {:pre [(native? native)]}
   (set! (.-__ro native) false)
   native)
@@ -691,7 +709,7 @@
     store)
   (get-index [store iname]
     (if (or (string? iname) (keyword? iname))
-      (js-lookup indices iname)
+      (js-lookup indices (name iname))
       iname))
 
   ITransactionalStore
