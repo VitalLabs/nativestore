@@ -224,9 +224,8 @@
 
   ICloneable
   (-clone [this]
-    (let [clone (Native. (volatile! keyset) false)]
-      (doseq [[k v] (seq this)]
-        (aset clone k v))
+    (let [clone (Native. (volatile! @keyset) false)]
+      (goog.object.forEach this (fn [v k] (aset clone k v)))
       clone))
 
   IEmptyableCollection
