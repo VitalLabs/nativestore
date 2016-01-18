@@ -16,11 +16,13 @@
           :cljsbuild {:builds
                       [ {:id "test"
                          :source-paths ["src" "test"]
-                         :compiler {:output-to "target/test/testable.js"
-                                    :output-dir "target/test"
+                         :compiler {:main orchestra.runner
+                                    :output-to "resources/test/js/testable.js"
+                                    :output-dir "resources/test/js/out"
+                                    :source-map "resources/test/js/testable.js.map"
+                                    :asset-path "/js/out"
                                     :optimizations :whitespace
                                     :recompile-dependents false
-                                    :pretty-print true}
-                         :notify-command ["phantomjs" :cljs.test/runner "target/test/testable.js"]}]
-                      :test-commands {"all" ["phantomjs" :runner "target/test/testable.js"]}}}})
+                                    :pretty-print true}}]
+                      :test-commands {"all" ["phantomjs" "test/phantomjs.js" "resources/test/index.html"]}}}})
 
