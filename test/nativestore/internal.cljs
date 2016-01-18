@@ -1,9 +1,7 @@
 (ns nativestore.internal
-  (:require-macros [cemerick.cljs.test
-                    :refer [is deftest with-test testing test-var]]
-                   [derive.core :refer [defnd with-tracked-dependencies]])
-  (:require [cemerick.cljs.test :as t]
+  (:require [cljs.test :as t :refer-macros [deftest is]]
             [clojure.set :as set]
+            [derive.core :refer-macros [defnd with-tracked-dependencies]]
             [derive.core :as d]
             [nativestore.core :as store]))
 
@@ -15,6 +13,12 @@
     (store/insert! #js {:id 4 :type "user" :name "Flora" :income 20})
     (store/insert! #js {:id 5 :type "user" :name "Flora" :income 10})
     (store/insert! #js {:id 6 :type "super" :name "George" :income 5})))
+
+(deftest native-type
+  (is (store/read-only? (store/native true)))
+  (is (not (store/read-only? (store/native false))))
+  (let [sample (store/native false)]
+    ))
 
 (deftest basic-store
   (let [store (store/create)]

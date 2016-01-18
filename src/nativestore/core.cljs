@@ -209,138 +209,161 @@
 (defn identity? [n1 n2]
   (= (aget n1 "id") (aget n2 "id")))
 
+;;
+;; Low level methods
+;;
+
+(defn- native-assoc!
+  "Internal method to allow index methods
+   to update an existing #native without
+   being in a transaction."
+  [native k v]
+  (vswap! (aget native "__keyset") conj k)
+  (aset native (name k) v)
+  native)
+
+(defn- native-dissoc!
+  "Internal method to allow index methods
+   to update an existing #native without
+   being in a transaction."
+  [native k]
+  (vswap! (aget native "__keyset") disj k)
+  (cljs.core/js-delete native (name k))
+  native)
           
 ;; Mutation can only be done on Natives in
 ;; a transaction or on copies of Natives generated
-;; via assoc, etc. or store/clone
+;; via copying assoc or clone
 
 (defprotocol IReadOnly
   (-read-only? [_]))
 
 (defprotocol INative)
   
-(declare clone-native)
-
-(deftype Native [^:mutable __ro]
+(deftype Native [__keyset ^:mutable __ro]
   INative
 
+  ICloneable
+  (-clone [this]
+    (let [clone (Native. (volatile! @__keyset) false)]
+      (doseq [key @__keyset]
+        (aset clone (name key) (aget this (name key))))
+      clone))
+
   IEmptyableCollection
-  (-empty [_] (Native. false))
+  (-empty [_] (Native. (volatile! #{}) false))
 
   IReadOnly
   (-read-only? [_] __ro)
 
-  IPrintWithWriter
-  (-pr-writer [native writer opts]
-    (-write writer "#native ")
-    (print-map
-     (->> (js-keys native)
-          (keep (fn [k]
-                  (let [v (aget native k)
-                        k (keyword k)]
-                    (when-not (or (fn? v)
-                                  (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :nativestore$core$IReadOnly$} k))
-                      [k v])))))
-     pr-writer writer opts))
-
   ICounted
   (-count [native]
-    (alength (js-keys native)))
+    (count @__keyset))
 
   ILookup
   (-lookup [native k]
+    {:pre [(keyword? k)]}
     (-lookup native k nil))
   (-lookup [native k not-found]
-    (let [key (if (keyword? k) (name k) k)
-          res (aget native key)]
-      (cond (nil? res)
-            not-found
-            (array? res)
-            (if (satisfies? IReference (aget res 0))
-              (amap res i ret (resolve-ref (aget res i)))
-              res)
-            (satisfies? IReference res)
-            (resolve-ref res)
-            :default
-            res)))
+    {:pre [(keyword? k)]}
+    (let [v (aget native (name k))]
+      (cond
+        (nil? v) not-found
+        (array? v) (if (satisfies? IReference (aget v 0))
+                     (amap v i ret (resolve-ref (aget v i)))
+                     v)
+        (satisfies? IReference v) (resolve-ref v)
+        :default v)))
 
   ITransientAssociative
   (-assoc! [native k v]
+    {:pre [(keyword? k)]}
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (aset native (if (keyword? k) (name k) k) v)
-    native)
+    (native-assoc! native k v))
 
   ITransientCollection
   (-conj! [native [k v]]
-    (when (and (-read-only? native) (not *transaction*))
-      (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (aset native (if (keyword? k) (name k) k) v)
-    native)
+    {:pre [(keyword? k)]}
+    (-assoc! native k v))
   
   ITransientMap
   (-dissoc! [native k]
+    {:pre [(keyword? k)]}
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (cljs.core/js-delete native (if (keyword? k) (name k) k))
-    native)
+    (native-dissoc! native k))
 
   IAssociative
   (-assoc [native k v]
-    (let [new (clone-native native)]
-      (aset new (if (keyword? k) (name k) k) v)
-      new))
+    {:pre [(keyword? k)]}
+    (let [new (clone native)]
+      (native-assoc! new k v)))
   
   IMap
   (-dissoc [native k]
-    (let [new (clone-native native)]
-      (cljs.core/js-delete new (if (keyword? k) (name k) k))
-      new))
+    {:pre [(keyword? k)]}
+    (let [new (clone native)]
+      (native-dissoc! new k)))
     
   ICollection
   (-conj [native [k v]]
-    (let [new (clone-native native)]
-      (aset new (if (keyword? k) (name k) k) v)
-      new))
+    {:pre [(keyword? k)]}
+    (-assoc native k v))
 
   ISeqable
   (-seq [native]
-    (let [res (array)]
-      (goog.object.forEach
-       native
-       (fn [v k]
-         (let [k (keyword k)]
-           (when-not (or (fn? v)
-                         (#{:cljs$lang$protocol_mask$partition0$ :cljs$lang$protocol_mask$partition1$ :__ro :nativestore$core$IReadOnly$ :nativestore$core$INative$} k))
-             (.push res [k v])))))
-      (seq res))))
+    (map (fn [k] [(keyword k) (aget native (name k))]) @__keyset))
+
+  IEncodeClojure
+  (-js->clj [native opts]
+    native)
+
+  IPrintWithWriter
+  (-pr-writer [native writer opts]
+    (-write writer "#native ")
+    (print-map (-seq native)
+               pr-writer writer opts)))
   
+(defn native
+  "Return a fresh native, optionally with the read-only set"
+  ([] (native false))
+  ([ro?] (Native. (volatile! #{}) ro?)))
 
-(defn to-native
-  "Copying version of to-native"
-  [jsobj]
-  (let [native (Native. false)]
-    (goog.object.forEach jsobj (fn [v k] (aset native k v)))
-    native))
-
-(defn native? [native]
+(defn native?
+  "Is this object a #native?"
+  [native]
   (satisfies? INative native))
 
-(defn read-only! [native]
+(defn to-native
+  "Copying conversion function, will return
+   a fresh, writable, #native"
+  [obj]
+  (cond (native? obj)   (clone obj)
+        (object? obj)   (let [native (native false)]
+                          (goog.object.forEach obj (fn [v k] (assoc! native k v)))
+                          native)
+        (seqable? obj) (let [native (native false)]
+                         (doseq [key (keys obj)]
+                           (assoc! native key (get obj key))))
+        :default       (throw js/Error (str "Trying to convert unknown object type" (type obj)))))
+
+(defn read-only!
+  [native]
   {:pre [(native? native)]}
   (set! (.-__ro native) true)
   native)
 
-(defn writeable! [native]
+(defn read-only?
+  [native]
+  {:pre [(native? native)]}
+  (-read-only? native))
+
+(defn writeable!
+  [native]
   {:pre [(native? native)]}
   (set! (.-__ro native) false)
   native)
-
-(defn- clone-native [native]
-  {:pre [(native? native)]}
-  (let [clone (new Native native)]
-    (goog.object.forEach native (fn [v k] (aset clone k v)))
-    (writeable! clone)))
     
 
 
@@ -348,16 +371,17 @@
 ;; Native object store
 ;; ============================
 
-
-(defn upsert-merge
+(defn- upsert-merge
+  "Only called from internal methods"
   ([o1 o2]
-     (doseq [k (js-keys o2)]
-       (if-not (nil? (aget o2 k))
-         (aset o1 k (aget o2 k))
-         (js-delete o1 k)))
-     o1)
+   (doseq [k (keys o2)]
+     (let [kstr (name k)]
+       (if-not (nil? (aget o2 kstr))
+         (native-assoc! o1 kstr (aget o2 kstr))
+         (native-dissoc! o1 kstr))))
+   o1)
   ([o1 o2 & more]
-     (apply upsert-merge (upsert-merge o1 o2) more)))
+   (apply upsert-merge (upsert-merge o1 o2) more)))
 
 ;; Return a cursor for walking a range of the index
 (deftype Cursor [idx start end ^:mutable valid? empty?]
@@ -587,14 +611,13 @@
 (defn compound-index [keyfns compfns]
   (BinaryIndex. (compound-key-fn keyfns) (compound-comparator compfns) (array)))
 
-(defn as-native
+(defn- as-ro-native
   "Ensure submitted object is a native and set to read-only state"
   [obj]
   (if (native? obj)
-    (do (set! (.-__ro obj) true) obj)
+    (read-only! obj)
     (let [native (to-native obj)]
-      (set! (.-__ro native) true)
-      native)))
+      (read-only! native))))
 
 (defn- update-listeners
   "Use this to update store listeners when write dependencies
@@ -640,7 +663,7 @@
     #_(.log js/console "Called insert!\n")
     ;; reuse this for writes instead of reads
     (with-tracked-dependencies [update-listeners]
-      (let [obj (as-native obj)]
+      (let [obj (as-ro-native obj)]
         (let [key ((key-fn root) obj)
               _ (assert key "Must have an ID field")
               names (js-keys indices)
@@ -712,7 +735,7 @@
     store)
   (get-index [store iname]
     (if (or (string? iname) (keyword? iname))
-      (js-lookup indices iname)
+      (js-lookup indices (name iname))
       iname))
 
   ITransactionalStore
