@@ -4,10 +4,11 @@
 
 (extend-protocol IReduce
   array
-  (-reduce [coll f]
-    (areduce coll i r (f) (f r (aget coll i))))
-  (-reduce [coll f start]
-    (areduce coll i r start (f r (aget coll i)))))
+  (-reduce
+    ([coll f]
+     (areduce coll i r (f) (f r (aget coll i))))
+    ([coll f start]
+     (areduce coll i r start (f r (aget coll i))))))
 
 (defn js-conj
   ([] #js [])
@@ -18,13 +19,6 @@
   array
   (-conj! [arry val] (js-conj arry val))
   (-persistent! [tcoll] tcoll))
-
-
-#_(extend-type js/moment
-  IPrintWithWriter  
-  (-pr-writer [moment writer opts]
-    (-write writer "#moment ")
-    (-write writer (.format moment "YYYY-MM-DD HH:mm"))))
 
 (defn count
   ([f coll]
