@@ -312,16 +312,18 @@
   ([] (native false))
   ([ro?] (Native. (volatile! #{}) ro?)))
 
-(defn to-native
-  "Copying version of to-native"
-  [jsobj]
-  (let [native (native false)]
-    (goog.object.forEach jsobj (fn [v k] (assoc! native k v)))
-    native))
-
 (defn native?
   [native]
   (satisfies? INative native))
+
+(defn to-native
+  "Copying version of to-native"
+  [obj]
+  (if (native? obj)
+    (clone obj)
+    (let [native (native false)]
+      (goog.object.forEach obj (fn [v k] (assoc! native k v)))
+      native)))
 
 (defn read-only!
   [native]
@@ -589,10 +591,9 @@
   "Ensure submitted object is a native and set to read-only state"
   [obj]
   (if (native? obj)
-    (do (set! (.-__ro obj) true) obj)
+    (read-only! obj)
     (let [native (to-native obj)]
-      (set! (.-__ro native) true)
-      native)))
+      (read-only! native))))
 
 (defn- update-listeners
   "Use this to update store listeners when write dependencies
