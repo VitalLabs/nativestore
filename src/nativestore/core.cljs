@@ -316,7 +316,7 @@
   "Copying version of to-native"
   [jsobj]
   (let [native (native false)]
-    (goog.object.forEach jsobj (fn [v k] (aset native k v)))
+    (goog.object.forEach jsobj (fn [v k] (assoc! native k v)))
     native))
 
 (defn native?
@@ -351,7 +351,7 @@
   ([o1 o2]
      (doseq [k (js-keys o2)]
        (if-not (nil? (aget o2 k))
-         (aset o1 k (aget o2 k))
+         (assoc! o1 k (aget o2 k))
          (js-delete o1 k)))
      o1)
   ([o1 o2 & more]
