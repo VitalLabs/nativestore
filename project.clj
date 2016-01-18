@@ -9,22 +9,18 @@
                  [prismatic/schema "0.2.6"]
                  [com.vitalreactor/derive "0.2.1-SNAPSHOT"]
                  [org.clojure/tools.nrepl "0.2.4"]]
-  :plugins [[lein-cljsbuild "1.0.3"]
-            [com.cemerick/austin "0.1.4"]
-            [com.cemerick/clojurescript.test "0.3.1"]]
-  :hooks [leiningen.cljsbuild]
+  :plugins [[lein-cljsbuild "1.1.1"]]
   :profiles
   ;; lein with-profiles test cljsbuild auto test
-  {:test {:dependencies [[com.cemerick/clojurescript.test "0.3.1"]]
+  {:test {:dependencies []
           :cljsbuild {:builds
                       [ {:id "test"
                          :source-paths ["src" "test"]
                          :compiler {:output-to "target/test/testable.js"
                                     :output-dir "target/test"
                                     :optimizations :whitespace
-                                    :pretty-print true
-                                    :preamble ["phantomjs-shims.js"]}
+                                    :recompile-dependents false
+                                    :pretty-print true}
                          :notify-command ["phantomjs" :cljs.test/runner "target/test/testable.js"]}]
-                      :test-commands {"all" ["phantomjs" :runner
-                                             "target/test/testable.js"]}}}})
-                                   
+                      :test-commands {"all" ["phantomjs" :runner "target/test/testable.js"]}}}})
+

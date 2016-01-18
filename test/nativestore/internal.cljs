@@ -1,9 +1,7 @@
 (ns nativestore.internal
-  (:require-macros [cemerick.cljs.test
-                    :refer [is deftest with-test testing test-var]]
-                   [derive.core :refer [defnd with-tracked-dependencies]])
-  (:require [cemerick.cljs.test :as t]
+  (:require [cljs.test :as t :refer-macros [deftest is]]
             [clojure.set :as set]
+            [derive.core :refer-macros [defnd with-tracked-dependencies]]
             [derive.core :as d]
             [nativestore.core :as store]))
 
