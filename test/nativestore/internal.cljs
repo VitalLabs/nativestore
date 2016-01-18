@@ -14,6 +14,12 @@
     (store/insert! #js {:id 5 :type "user" :name "Flora" :income 10})
     (store/insert! #js {:id 6 :type "super" :name "George" :income 5})))
 
+(deftest native-type
+  (is (store/read-only? (store/native true)))
+  (is (not (store/read-only? (store/native false))))
+  (let [sample (store/native false)]
+    ))
+
 (deftest basic-store
   (let [store (store/create)]
     (store/ensure-index store :name :name)

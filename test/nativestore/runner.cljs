@@ -4,14 +4,15 @@
             [cljs.test :refer-macros [run-tests] :as test]))
 
 (set! *print-newline* false)
-(set-print-fn! js/print)
+(set-print-fn! #(js/console.log %))
 
 (def report (atom nil))
 
 (defn run-all-tests
   []
-  (println "Running all tests")
-  (run-tests 'nativestore.internal)
+  (.log js/console "Running all tests")
+  (run-tests (test/empty-env)
+             'nativestore.internal)
   (test/successful? @report))
 
 (defmethod cljs.test/report [:cljs.test/default :end-run-tests] [m]
@@ -22,6 +23,3 @@
       (println "cljs.test/report -> Tests Failed :(")
       (prn m))))
 
-(defn ^:export main []
-  (println "Nativestore Test Main")
-  (run-all-tests))

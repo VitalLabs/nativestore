@@ -23,5 +23,5 @@
                             :optimizations :whitespace
                             :recompile-dependents false
                             :pretty-print true}}]
-                      :test-commands {"all" ["phantomjs" "test/phantomjs.js" "resources/test/index.html"]}})
+              :test-commands {"all" ["phantomjs" "test/phantomjs.js" "resources/test/index.html"]}})
 

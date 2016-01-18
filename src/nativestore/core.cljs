@@ -209,10 +209,31 @@
 (defn identity? [n1 n2]
   (= (aget n1 "id") (aget n2 "id")))
 
+;;
+;; Low level methods
+;;
+
+(defn- native-assoc!
+  "Internal method to allow index methods
+   to update an existing #native without
+   being in a transaction."
+  [native k v]
+  (vswap! (aget native "__keyset") conj k)
+  (aset native (name k) v)
+  native)
+
+(defn- native-dissoc!
+  "Internal method to allow index methods
+   to update an existing #native without
+   being in a transaction."
+  [native k]
+  (vswap! (aget native "__keyset") disj k)
+  (cljs.core/js-delete native (name k))
+  native)
           
 ;; Mutation can only be done on Natives in
 ;; a transaction or on copies of Natives generated
-;; via assoc, etc. or store/clone
+;; via copying assoc or clone
 
 (defprotocol IReadOnly
   (-read-only? [_]))
@@ -259,9 +280,7 @@
     {:pre [(keyword? k)]}
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (vswap! __keyset conj k)
-    (aset native (name k) v)
-    native)
+    (native-assoc! native k v))
 
   ITransientCollection
   (-conj! [native [k v]]
@@ -273,21 +292,19 @@
     {:pre [(keyword? k)]}
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (vswap! __keyset disj k)
-    (cljs.core/js-delete native (name k))
-    native)
+    (native-dissoc! native k))
 
   IAssociative
   (-assoc [native k v]
     {:pre [(keyword? k)]}
     (let [new (clone native)]
-      (-assoc! new k v)))
+      (native-assoc! new k v)))
   
   IMap
   (-dissoc [native k]
     {:pre [(keyword? k)]}
     (let [new (clone native)]
-      (-dissoc! new k)))
+      (native-dissoc! new k)))
     
   ICollection
   (-conj [native [k v]]
@@ -309,21 +326,27 @@
                pr-writer writer opts)))
   
 (defn native
+  "Return a fresh native, optionally with the read-only set"
   ([] (native false))
   ([ro?] (Native. (volatile! #{}) ro?)))
 
 (defn native?
+  "Is this object a #native?"
   [native]
   (satisfies? INative native))
 
 (defn to-native
-  "Copying version of to-native"
+  "Copying conversion function, will return
+   a fresh, writable, #native"
   [obj]
-  (if (native? obj)
-    (clone obj)
-    (let [native (native false)]
-      (goog.object.forEach obj (fn [v k] (assoc! native k v)))
-      native)))
+  (cond (native? obj)   (clone obj)
+        (object? obj)   (let [native (native false)]
+                          (goog.object.forEach obj (fn [v k] (assoc! native k v)))
+                          native)
+        (seqable? obj) (let [native (native false)]
+                         (doseq [key (keys obj)]
+                           (assoc! native key (get obj key))))
+        :default       (throw js/Error (str "Trying to convert unknown object type" (type obj)))))
 
 (defn read-only!
   [native]
@@ -348,13 +371,13 @@
 ;; Native object store
 ;; ============================
 
-
-(defn upsert-merge
+(defn- upsert-merge
+  "Only called from internal methods"
   ([o1 o2]
-     (doseq [k (js-keys o2)]
+     (doseq [k (keys o2)]
        (if-not (nil? (aget o2 k))
-         (assoc! o1 k (aget o2 k))
-         (js-delete o1 k)))
+         (native-assoc! o1 k (aget o2 k))
+         (native-dissoc! o1 k)))
      o1)
   ([o1 o2 & more]
      (apply upsert-merge (upsert-merge o1 o2) more)))
@@ -587,7 +610,7 @@
 (defn compound-index [keyfns compfns]
   (BinaryIndex. (compound-key-fn keyfns) (compound-comparator compfns) (array)))
 
-(defn as-native
+(defn- as-ro-native
   "Ensure submitted object is a native and set to read-only state"
   [obj]
   (if (native? obj)
@@ -639,7 +662,7 @@
     #_(.log js/console "Called insert!\n")
     ;; reuse this for writes instead of reads
     (with-tracked-dependencies [update-listeners]
-      (let [obj (as-native obj)]
+      (let [obj (as-ro-native obj)]
         (let [key ((key-fn root) obj)
               _ (assert key "Must have an ID field")
               names (js-keys indices)
