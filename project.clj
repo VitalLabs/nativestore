@@ -10,19 +10,18 @@
                  [com.vitalreactor/derive "0.2.1-SNAPSHOT"]
                  [org.clojure/tools.nrepl "0.2.4"]]
   :plugins [[lein-cljsbuild "1.1.1"]]
-  :profiles
+  :hooks [leiningen.cljsbuild]
   ;; lein with-profiles test cljsbuild auto test
-  {:test {:dependencies []
-          :cljsbuild {:builds
-                      [ {:id "test"
-                         :source-paths ["src" "test"]
-                         :compiler {:main orchestra.runner
-                                    :output-to "resources/test/js/testable.js"
-                                    :output-dir "resources/test/js/out"
-                                    :source-map "resources/test/js/testable.js.map"
-                                    :asset-path "/js/out"
-                                    :optimizations :whitespace
-                                    :recompile-dependents false
-                                    :pretty-print true}}]
-                      :test-commands {"all" ["phantomjs" "test/phantomjs.js" "resources/test/index.html"]}}}})
+  :cljsbuild {:builds
+              [ {:id "test"
+                 :source-paths ["src" "test"]
+                 :compiler {:main orchestra.runner
+                            :output-to "resources/test/js/testable.js"
+                            :output-dir "resources/test/js/out"
+                            :source-map "resources/test/js/testable.js.map"
+                            :asset-path "/js/out"
+                            :optimizations :whitespace
+                            :recompile-dependents false
+                            :pretty-print true}}]
+                      :test-commands {"all" ["phantomjs" "test/phantomjs.js" "resources/test/index.html"]}})
 

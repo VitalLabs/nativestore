@@ -1,7 +1,7 @@
 (ns nativestore.runner
   (:require [nativestore.internal]
             [nativestore.core]
-            [cljs.test :refer-macros [run-tests]]))
+            [cljs.test :refer-macros [run-tests] :as test]))
 
 (set! *print-newline* false)
 (set-print-fn! js/print)
@@ -10,12 +10,12 @@
 
 (defn run-all-tests
   []
-  (println "Running tests")
+  (println "Running all tests")
   (run-tests 'nativestore.internal)
-  (cljs.test/successful? @report))
+  (test/successful? @report))
 
 (defmethod cljs.test/report [:cljs.test/default :end-run-tests] [m]
-  (if (cljs.test/successful? m)
+  (if (test/successful? m)
     (println "cljs.test/report -> Tests Succeeded!")
     (do
       (reset! report m)
@@ -23,5 +23,5 @@
       (prn m))))
 
 (defn ^:export main []
-  (println "Testing Nativestore")
+  (println "Nativestore Test Main")
   (run-all-tests))
