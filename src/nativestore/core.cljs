@@ -219,13 +219,14 @@
 
 (defprotocol INative)
   
-(deftype Native [keyset ^:mutable __ro]
+(deftype Native [__keyset ^:mutable __ro]
   INative
 
   ICloneable
   (-clone [this]
-    (let [clone (Native. (volatile! @keyset) false)]
-      (goog.object.forEach this (fn [v k] (aset clone k v)))
+    (let [clone (Native. (volatile! @__keyset) false)]
+      (doseq [key @__keyset]
+        (aset clone (name key) (aget this (name key))))
       clone))
 
   IEmptyableCollection
@@ -236,7 +237,7 @@
 
   ICounted
   (-count [native]
-    (count @keyset))
+    (count @__keyset))
 
   ILookup
   (-lookup [native k]
@@ -258,7 +259,7 @@
     {:pre [(keyword? k)]}
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (vswap! keyset conj k)
+    (vswap! __keyset conj k)
     (aset native (name k) v)
     native)
 
@@ -272,7 +273,7 @@
     {:pre [(keyword? k)]}
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (vswap! keyset disj k)
+    (vswap! __keyset disj k)
     (cljs.core/js-delete native (name k))
     native)
 
@@ -280,17 +281,13 @@
   (-assoc [native k v]
     {:pre [(keyword? k)]}
     (let [new (clone native)]
-      (vswap! keyset conj k)
-      (aset new (name k) v)
-      new))
+      (-assoc! new k v)))
   
   IMap
   (-dissoc [native k]
     {:pre [(keyword? k)]}
     (let [new (clone native)]
-      (vswap! keyset disj k)
-      (cljs.core/js-delete new (name k))
-      new))
+      (-dissoc! new k)))
     
   ICollection
   (-conj [native [k v]]
@@ -299,7 +296,7 @@
 
   ISeqable
   (-seq [native]
-    (map (fn [k] [(keyword k) (aget native (name k))]) @keyset))
+    (map (fn [k] [(keyword k) (aget native (name k))]) @__keyset))
 
   IEncodeClojure
   (-js->clj [native opts]
@@ -331,6 +328,11 @@
   {:pre [(native? native)]}
   (set! (.-__ro native) true)
   native)
+
+(defn read-only?
+  [native]
+  {:pre [(native? native)]}
+  (-read-only? native))
 
 (defn writeable!
   [native]
