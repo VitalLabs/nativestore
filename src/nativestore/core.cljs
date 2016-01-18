@@ -213,24 +213,6 @@
 ;; Low level methods
 ;;
 
-(defn- native-assoc!
-  "Internal method to allow index methods
-   to update an existing #native without
-   being in a transaction."
-  [native k v]
-  (vswap! (aget native "__keyset") conj k)
-  (aset native (name k) v)
-  native)
-
-(defn- native-dissoc!
-  "Internal method to allow index methods
-   to update an existing #native without
-   being in a transaction."
-  [native k]
-  (vswap! (aget native "__keyset") disj k)
-  (cljs.core/js-delete native (name k))
-  native)
-          
 ;; Mutation can only be done on Natives in
 ;; a transaction or on copies of Natives generated
 ;; via copying assoc or clone
@@ -280,7 +262,9 @@
     {:pre [(keyword? k)]}
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (native-assoc! native k v))
+    (vswap! __keyset conj k)
+    (aset native (name k) v)
+    native)
 
   ITransientCollection
   (-conj! [native [k v]]
@@ -292,19 +276,21 @@
     {:pre [(keyword? k)]}
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
-    (native-dissoc! native k))
+    (vswap! __keyset disj k)
+    (cljs.core/js-delete native (name k))
+    native)
 
   IAssociative
   (-assoc [native k v]
     {:pre [(keyword? k)]}
     (let [new (clone native)]
-      (native-assoc! new k v)))
+      (-assoc! new k v)))
   
   IMap
   (-dissoc [native k]
     {:pre [(keyword? k)]}
     (let [new (clone native)]
-      (native-dissoc! new k)))
+      (-dissoc! new k)))
     
   ICollection
   (-conj [native [k v]]
@@ -341,11 +327,11 @@
   [obj]
   (cond (native? obj)   (clone obj)
         (object? obj)   (let [native (native false)]
-                          (goog.object.forEach obj (fn [v k] (assoc! native k v)))
+                          (goog.object.forEach obj (fn [v k] (-assoc! native k v)))
                           native)
         (seqable? obj) (let [native (native false)]
                          (doseq [key (keys obj)]
-                           (assoc! native key (get obj key))))
+                           (-assoc! native key (get obj key))))
         :default       (throw js/Error (str "Trying to convert unknown object type" (type obj)))))
 
 (defn read-only!
@@ -374,11 +360,13 @@
 (defn- upsert-merge
   "Only called from internal methods"
   ([o1 o2]
-   (doseq [k (keys o2)]
-     (let [kstr (name k)]
-       (if-not (nil? (aget o2 kstr))
-         (native-assoc! o1 kstr (aget o2 kstr))
-         (native-dissoc! o1 kstr))))
+   ;; allow updates
+   (binding [*transaction* (if *transaction* *transaction* true)] 
+     (doseq [k (keys o2)]
+       (let [kstr (name k)]
+         (if-not (nil? (aget o2 kstr))
+           (-assoc! o1 kstr (aget o2 kstr))
+           (-dissoc! o1 kstr)))))
    o1)
   ([o1 o2 & more]
    (apply upsert-merge (upsert-merge o1 o2) more)))

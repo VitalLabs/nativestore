@@ -1,0 +1,3 @@
+test:		
+  override:		
+    - lein with-profiles base,test cljsbuild test
