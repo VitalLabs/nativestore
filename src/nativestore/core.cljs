@@ -374,13 +374,14 @@
 (defn- upsert-merge
   "Only called from internal methods"
   ([o1 o2]
-     (doseq [k (keys o2)]
-       (if-not (nil? (aget o2 k))
-         (native-assoc! o1 k (aget o2 k))
-         (native-dissoc! o1 k)))
-     o1)
+   (doseq [k (keys o2)]
+     (let [kstr (name k)]
+       (if-not (nil? (aget o2 kstr))
+         (native-assoc! o1 kstr (aget o2 kstr))
+         (native-dissoc! o1 kstr))))
+   o1)
   ([o1 o2 & more]
-     (apply upsert-merge (upsert-merge o1 o2) more)))
+   (apply upsert-merge (upsert-merge o1 o2) more)))
 
 ;; Return a cursor for walking a range of the index
 (deftype Cursor [idx start end ^:mutable valid? empty?]
