@@ -1,4 +1,4 @@
-(defproject com.vitalreactor/nativestore "0.2.1-SNAPSHOT"
+(defproject com.vitalreactor/nativestore "0.2.1"
   :description "A client-side, in-memory, indexed data store."
   :url "http://github.com/vitalreactor/nativestore"
   :license {:name "MIT License"
@@ -7,11 +7,11 @@
                  [org.clojure/clojurescript "1.7.228"]
                  [im.chit/purnam.native "0.4.3"]
                  [prismatic/schema "0.2.6"]
-                 [com.vitalreactor/derive "0.2.1-SNAPSHOT"]
-                 [org.clojure/tools.nrepl "0.2.4"]]
-  :plugins [[lein-cljsbuild "1.1.1"]]
+                 [com.vitalreactor/derive "0.2.1"]]
+  :plugins [[lein-cljsbuild "1.1.2"]]
   :hooks [leiningen.cljsbuild]
-  ;; lein with-profiles test cljsbuild auto test
+  :profiles {:dev {:dependencies [[org.clojure/tools.nrepl "0.2.4"]]
+                   :source-paths ["src" "test"]}}
   :cljsbuild {:builds
               [ {:id "test"
                  :source-paths ["src" "test"]
@@ -20,6 +20,7 @@
                             :output-dir "resources/test/js/out"
                             :source-map "resources/test/js/testable.js.map"
                             :asset-path "/js/out"
+                            :parallel-build true
                             :optimizations :whitespace
                             :recompile-dependents false
                             :pretty-print true}}]
