@@ -268,7 +268,6 @@
 
   ITransientCollection
   (-conj! [native [k v]]
-    {:pre [(keyword? k)]}
     (-assoc! native k v))
   
   ITransientMap
@@ -282,19 +281,16 @@
 
   IAssociative
   (-assoc [native k v]
-    {:pre [(keyword? k)]}
     (let [new (clone native)]
       (-assoc! new k v)))
   
   IMap
   (-dissoc [native k]
-    {:pre [(keyword? k)]}
     (let [new (clone native)]
       (-dissoc! new k)))
     
   ICollection
   (-conj [native [k v]]
-    {:pre [(keyword? k)]}
     (-assoc native k v))
 
   ISeqable
