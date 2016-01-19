@@ -323,11 +323,11 @@
   [obj]
   (cond (native? obj)   (clone obj)
         (object? obj)   (let [native (native false)]
-                          (goog.object.forEach obj (fn [v k] (-assoc! native k v)))
+                          (goog.object.forEach obj (fn [v k] (-assoc! native (keyword k) v)))
                           native)
         (seqable? obj) (let [native (native false)]
                          (doseq [key (keys obj)]
-                           (-assoc! native key (get obj key))))
+                           (-assoc! native (keyword key) (get obj (name key)))))
         :default       (throw js/Error (str "Trying to convert unknown object type" (type obj)))))
 
 (defn read-only!
