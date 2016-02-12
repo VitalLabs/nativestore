@@ -285,10 +285,9 @@
 
   ILookup
   (-lookup [native k]
-    {:pre [(keyword? k)]}
     (-lookup native k nil))
   (-lookup [native k not-found]
-    {:pre [(keyword? k)]}
+    (assert (keyword? k))
     (let [v (aget native (name k))]
       (cond
         (nil? v) not-found
@@ -313,7 +312,7 @@
   
   ITransientMap
   (-dissoc! [native k]
-    {:pre [(keyword? k)]}
+    (assert (keyword? k))
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
     (vswap! __keyset disj k)
