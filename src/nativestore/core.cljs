@@ -1,8 +1,49 @@
 (ns nativestore.core
-  (:require [goog.object :as obj]
-            [purnam.native.functions :refer [js-lookup js-assoc js-dissoc
-                                             js-merge js-map js-copy]]
+  (:require [goog.object :as gobj]
+            [goog.array :as garr]
             [derive.core :as d :refer-macros [with-tracked-dependencies defnd]]))
+
+;;
+;; Legacy JS wrappers
+;;
+
+(defn js-strkey [x]
+  (cond
+    (string? x) x
+    (keyword? x) (name x)
+    :else (str x)))
+
+(defn js-lookup
+  ([o k]
+     (aget o (js-strkey k)))
+  ([o k not-found]
+     (let [s (js-strkey k)]
+       (if-let [res (aget o s)]
+         res
+         not-found))))
+
+(defn js-copy
+  [o]
+  (let [t (js/goog.typeOf o)]
+    (cond (= t "array")  (garr/clone o)
+          :else (gobj/clone o))))
+
+(defn js-assoc
+  ([o k v]
+     (do (aset o (js-strkey k) v)
+         o))
+  ([o k v & more]
+     (js-assoc o k v)
+     (if more
+       (recur o (first more) (second more) (nnext more))
+       o)))
+
+(defn js-dissoc
+  [o k & more]
+  (js-delete o (js-strkey k))
+  (if more
+    (recur o (first more) (next more))
+    o))
 
 ;;
 ;; Store protocols
@@ -259,7 +300,7 @@
 
   ITransientAssociative
   (-assoc! [native k v]
-    {:pre [(keyword? k)]}
+    (assert (keyword? k))
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
     (vswap! __keyset conj k)
@@ -276,7 +317,7 @@
     (when (and (-read-only? native) (not *transaction*))
       (throw (js/Error. "Cannot mutate store values outside transact!: ")))
     (vswap! __keyset disj k)
-    (cljs.core/js-delete native (name k))
+    (js-delete native (name k))
     native)
 
   IAssociative
@@ -361,8 +402,8 @@
      (doseq [k (keys o2)]
        (let [kstr (name k)]
          (if-not (nil? (aget o2 kstr))
-           (-assoc! o1 kstr (aget o2 kstr))
-           (-dissoc! o1 kstr)))))
+           (-assoc! o1 k (aget o2 kstr))
+           (-dissoc! o1 k)))))
    o1)
   ([o1 o2 & more]
    (apply upsert-merge (upsert-merge o1 o2) more)))
