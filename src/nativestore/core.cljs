@@ -773,7 +773,7 @@
   IWatchable
   (-notify-watches [store _ txs]
     (doseq [name (js-keys tx-listeners)]
-      (let [listener (get tx-listeners name)]
+      (let [listener (aget tx-listeners name)]
         (listener nil txs)))
     store)
   (-add-watch [store key f]
