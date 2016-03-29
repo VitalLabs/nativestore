@@ -1,4 +1,4 @@
-(defproject com.vitalreactor/nativestore "0.2.2"
+(defproject com.vitalreactor/nativestore "0.2.3-SNAPSHOT"
   :description "A client-side, in-memory, indexed data store."
   :url "http://github.com/vitalreactor/nativestore"
   :license {:name "MIT License"
