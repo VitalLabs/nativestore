@@ -243,9 +243,12 @@
 
 (defn reference [db obj]
   (NativeReference.
-   db (if (or (string? obj) (number? obj) (not (native? obj)))
-        obj
-        ((key-fn (.-root db)) obj))))
+   db (cond (or (string? obj) (number? obj) (not (native? obj)))
+            obj
+            (native? obj)
+            (let [id ((key-fn (.-root db)) obj)]
+              (assert id "native object must have an id")
+              id))))
 
 (defn identity? [n1 n2]
   (= (aget n1 "id") (aget n2 "id")))
@@ -308,6 +311,7 @@
 
   ITransientCollection
   (-conj! [native [k v]]
+    (assert (keyword? k))
     (-assoc! native k v))
   
   ITransientMap
@@ -321,16 +325,19 @@
 
   IAssociative
   (-assoc [native k v]
+    (assert (keyword? k))
     (let [new (clone native)]
       (-assoc! new k v)))
   
   IMap
   (-dissoc [native k]
+    (assert (keyword? k))
     (let [new (clone native)]
       (-dissoc! new k)))
     
   ICollection
   (-conj [native [k v]]
+    (assert (keyword? k))
     (-assoc native k v))
 
   ISeqable
