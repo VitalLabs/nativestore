@@ -4,7 +4,7 @@
   :license {:name "MIT License"
             :url "http://github.com/vitalreactor/derive/blob/master/LICENSE"}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.228"]
+                 [org.clojure/clojurescript "1.8.51"]
                  [prismatic/schema "0.2.6"]
                  [com.vitalreactor/derive "0.2.1"]]
   :plugins [[lein-cljsbuild "1.1.2"]]
